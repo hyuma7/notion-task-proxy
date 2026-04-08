@@ -20,21 +20,32 @@ function validateEnv(): Response | null {
   return null;
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "PATCH, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+};
+
 export default async function handler(
   req: Request,
   { params }: { params: { id: string } }
 ): Promise<Response> {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   const envError = validateEnv();
   if (envError) return envError;
 
   // Authentication — always enforced
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${API_SECRET}`) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
   }
 
   if (req.method !== "PATCH") {
-    return Response.json({ error: "Method not allowed" }, { status: 405 });
+    return Response.json({ error: "Method not allowed" }, { status: 405, headers: CORS_HEADERS });
   }
 
   // Validate :id is a proper UUID to prevent passing arbitrary strings to Notion
@@ -86,5 +97,5 @@ export default async function handler(
     );
   }
 
-  return Response.json({ success: true });
+  return Response.json({ success: true }, { headers: CORS_HEADERS });
 }

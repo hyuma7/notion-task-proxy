@@ -58,7 +58,18 @@ export function parsePage(page: any): Task | null {
   }
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+};
+
 export default async function handler(req: Request): Promise<Response> {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   // Validate environment variables — API_SECRET is required
   const envError = validateEnv();
   if (envError) return envError;
@@ -66,7 +77,7 @@ export default async function handler(req: Request): Promise<Response> {
   // Authentication — always enforced
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${API_SECRET}`) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS_HEADERS });
   }
 
   const url = new URL(req.url);
@@ -131,13 +142,6 @@ export default async function handler(req: Request): Promise<Response> {
 
   return Response.json(
     { tasks, count: tasks.length },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        // Restrict to same origin by default; adjust ALLOWED_ORIGIN env var to permit specific clients
-        "Access-Control-Allow-Origin":
-          process.env.ALLOWED_ORIGIN ?? "null",
-      },
-    }
+    { headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
   );
 }
